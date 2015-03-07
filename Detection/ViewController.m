@@ -8,6 +8,7 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
+#import <Accelerate/Accelerate.h>
 #import "ViewController.h"
 
 typedef enum {
@@ -33,6 +34,9 @@ typedef enum {
 @property (nonatomic, strong) dispatch_queue_t assetWritingQueue;
 @property (nonatomic, strong) AVAssetWriterInput *assetWriterInput;
 
+// Kernels
+@property (nonatomic, assign) int8_t* kernel;
+
 @end
 
 @implementation ViewController
@@ -40,13 +44,16 @@ typedef enum {
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
+    
+    // Setup kernels
+    //self.kernel = &((int8_t){-2, -2, 0, -2, 6, 0, 0, 0, 0});
+    
+    // Setup layer for preview
     self.previewLayer = [CALayer layer];
     [self.previewLayer setFrame:self.view.bounds];
-//    self.previewLayer.bounds = CGRectMake(0, 0, self.view.frame.size.height, self.view.frame.size.width);
-//    self.previewLayer.position = CGPointMake(self.view.frame.size.width/2., self.view.frame.size.height/2.);
-//    self.previewLayer.affineTransform = CGAffineTransformMakeRotation(M_PI/2);
     [self.view.layer insertSublayer:self.previewLayer atIndex:0];
     
+    // Setup capture session
     self.captureSession = [AVCaptureSession new];
     self.captureSession.sessionPreset = AVCaptureSessionPreset640x480;
     AVCaptureDevice *frontCamera;
@@ -61,19 +68,10 @@ typedef enum {
     AVCaptureDeviceInput *frontCaptureInput = [[AVCaptureDeviceInput alloc] initWithDevice:frontCamera error:nil];
     [self.captureSession addInput:frontCaptureInput];
     
-    //self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:self.captureSession];
-    //self.previewLayer.frame = self.view.frame;
-    
-    //    self.movieFileOutput = [AVCaptureMovieFileOutput new];
-    //    [self.captureSession addOutput:self.movieFileOutput];
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(orientationChanged)
-                                                 name:UIDeviceOrientationDidChangeNotification
-                                               object:nil];
-    
+    // Setup outputs
     self.videoOutput = [AVCaptureVideoDataOutput new];
-    [self.videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInteger:kCVPixelFormatType_32BGRA] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
+//    [self.videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInteger:kCVPixelFormatType_32BGRA] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
+    [self.videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInteger:kCVPixelFormatType_420YpCbCr8BiPlanarFullRange] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
     
     dispatch_queue_t videoDataDispatchQueue = dispatch_queue_create("edu.CS2049.videoDataOutputQueue", DISPATCH_QUEUE_SERIAL);
     [self.videoOutput setSampleBufferDelegate:self queue:videoDataDispatchQueue];
@@ -84,6 +82,13 @@ typedef enum {
     [self createNewWriter];
     self.assetWritingQueue = dispatch_queue_create("edu.CS2049.assetWritingQueue", DISPATCH_QUEUE_SERIAL);
     
+    // Detect orientation changes
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(orientationChanged)
+                                                 name:UIDeviceOrientationDidChangeNotification
+                                               object:nil];
+
+    // Start
     [self.captureSession startRunning];
 }
 
@@ -154,27 +159,49 @@ typedef enum {
 - (void) processPixelBuffer: (CVImageBufferRef) pixelBuffer {
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
     
-    size_t bufferWidth = CVPixelBufferGetWidth(pixelBuffer);
-    size_t bufferHeight = CVPixelBufferGetHeight(pixelBuffer);
-    unsigned char *baseAddress = (unsigned char *)CVPixelBufferGetBaseAddress(pixelBuffer);
-    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer);
-    int bytesPerPixel = 4;
+//    size_t bufferWidth = CVPixelBufferGetWidth(pixelBuffer);
+//    size_t bufferHeight = CVPixelBufferGetHeight(pixelBuffer);
+//    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer);
+//    unsigned char *baseAddress = (unsigned char *)CVPixelBufferGetBaseAddress(pixelBuffer);
+
+    size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
+    size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
+    size_t bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
+    unsigned char *baseAddress = (unsigned char *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
+    unsigned char *newAddress = malloc(bytesPerRow*height);
+    
+    int bytesPerPixel = 1;
     int bitsPerComponent = 8;
     int greenValue = 0;
 
-    for (int row = 0; row < bufferHeight; row++) {
-        for (int column = 0; column < bufferWidth; column++) {
-            baseAddress[row*bytesPerRow + column*bytesPerPixel + 1] = greenValue;
-        }
-    }
+//    for (int row = 0; row < bufferHeight; row++) {
+//        for (int column = 0; column < bufferWidth; column++) {
+//            //baseAddress[row*bytesPerRow + column*bytesPerPixel + 1] = greenValue;
+//        }
+//    }
+    vImage_Buffer src = { baseAddress, height, width, bytesPerRow };
+    vImage_Buffer dest = { newAddress, height, width, bytesPerRow };
+    unsigned char bgColor[4] = { 0, 0, 0, 0 };
+    const int16_t nKernel[25] = {2,4,5,4,2,4,9,12,9,4,5,12,15,12,5,4,9,12,9,4,2,4,5,4,2};
+    const int16_t vKernel[9] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
+    const int16_t hKernel[9] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
 
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    CGContextRef context = CGBitmapContextCreate(baseAddress, bufferWidth, bufferHeight, bitsPerComponent, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
+    vImageConvolve_Planar8(&src, &dest, NULL, 0, 0, nKernel, 5, 5, 115, bgColor, kvImageBackgroundColorFill);
+    vImageConvolve_Planar8(&dest, &src, NULL, 0, 0, hKernel, 3, 3, 1, bgColor, kvImageBackgroundColorFill);
+    vImageConvolve_Planar8(&src, &dest, NULL, 0, 0, vKernel, 3, 3, 1, bgColor, kvImageBackgroundColorFill);
+    
+
+//    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
+//    CGContextRef context = CGBitmapContextCreate(baseAddress, bufferWidth, bufferHeight, bitsPerComponent, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
+    CGContextRef context = CGBitmapContextCreate(newAddress, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
+
     CGImageRef imageRef = CGBitmapContextCreateImage(context);
     
     CGContextRelease(context);
     CGColorSpaceRelease(colorSpace);
     CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+    free(newAddress);
     
     dispatch_sync(dispatch_get_main_queue(), ^{
         [self.view.layer setContents: (__bridge id)imageRef];
