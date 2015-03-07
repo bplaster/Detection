@@ -24,8 +24,9 @@ typedef enum {
 @property (nonatomic, strong) AVCaptureMovieFileOutput *movieFileOutput;
 @property (nonatomic, assign) VFRecordingState recordingState;
 @property (strong, nonatomic) IBOutlet UIButton *recordButton;
-@property (strong, nonatomic) IBOutlet UIImageView *previewImageView;
 @property (nonatomic, strong) AVCaptureVideoDataOutput *videoOutput;
+@property (strong, nonatomic) IBOutlet UISlider *thresholdSlider;
+@property (nonatomic, assign) BOOL edgesEnabled;
 
 @property (nonatomic, strong) CALayer *previewLayer;
 @property (nonatomic, strong) NSURL *fileURL;
@@ -47,6 +48,7 @@ typedef enum {
     
     // Setup kernels
     //self.kernel = &((int8_t){-2, -2, 0, -2, 6, 0, 0, 0, 0});
+    self.edgesEnabled = NO;
     
     // Setup layer for preview
     self.previewLayer = [CALayer layer];
@@ -125,6 +127,11 @@ typedef enum {
         [videoConnection setVideoOrientation:AVCaptureVideoOrientationLandscapeRight];
 }
 
+- (IBAction)toggleEdgeChanged:(id)sender {
+    
+    self.edgesEnabled = [((UISwitch *)sender) isOn];
+}
+
 - (IBAction)recordButtonPressed:(id)sender {
     if (self.recordingState == VFRecordingStateRecording) {
         [self.recordButton setTitle:@"Record" forState:UIControlStateNormal];
@@ -168,28 +175,28 @@ typedef enum {
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
     size_t bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
     unsigned char *baseAddress = (unsigned char *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
-    unsigned char *newAddress = malloc(bytesPerRow*height);
-    
-    int bytesPerPixel = 1;
+    unsigned char *destAddress = malloc(bytesPerRow*height);
     int bitsPerComponent = 8;
-
+    
     vImage_Buffer src = { baseAddress, height, width, bytesPerRow };
-    vImage_Buffer dest = { newAddress, height, width, bytesPerRow };
     
-    [self cannyDetector:src toDestination:dest withMinVal:50 andMaxVal:200];
-    
-    
-//    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
-//    CGContextRef context = CGBitmapContextCreate(baseAddress, bufferWidth, bufferHeight, bitsPerComponent, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
-    CGContextRef context = CGBitmapContextCreate(dest.data, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
+    CGContextRef context;
 
+    if (self.edgesEnabled) {
+        vImage_Buffer dest = {destAddress, height, width, bytesPerRow };
+        [self cannyDetector:src toDestination:dest withMinVal:75 andMaxVal:100];
+        context = CGBitmapContextCreate(destAddress, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
+    } else {
+        context = CGBitmapContextCreate(baseAddress, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
+    }
+    
     CGImageRef imageRef = CGBitmapContextCreateImage(context);
     
     CGContextRelease(context);
     CGColorSpaceRelease(colorSpace);
     CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
-    free(newAddress);
+    free(destAddress);
     
     dispatch_sync(dispatch_get_main_queue(), ^{
         [self.view.layer setContents: (__bridge id)imageRef];
@@ -209,8 +216,8 @@ typedef enum {
     vImageConvolve_Planar8(&source, &destination, NULL, 0, 0, gaussKernel, 5, 5, 115, 0, kvImageEdgeExtend);
     
     // Partial derivative arrays
-    unsigned char *gxAddress = malloc(arraySize);
-    unsigned char *gyAddress = malloc(arraySize);
+    signed char *gxAddress = malloc(arraySize);
+    signed char *gyAddress = malloc(arraySize);
     vImage_Buffer gx = {gxAddress, source.height, source.width, source.rowBytes};
     vImage_Buffer gy = {gyAddress, source.height, source.width, source.rowBytes};
     
@@ -222,7 +229,7 @@ typedef enum {
     
     // Direction and Magnitude
     unsigned char *magAddress = malloc(arraySize);
-    signed char *dirAddress = malloc(arraySize);
+//    float *dirAddress = malloc(arraySize*sizeof(float));
     unsigned long pixel = 0;
     for (int row = 0; row < source.height; row++) {
         for (int column = 0; column < source.width; column++) {
@@ -247,6 +254,8 @@ typedef enum {
             float dir = 0;
             if (gxAddress[pixel]) {
                 dir = atanf(gyAddress[pixel]/gxAddress[pixel]);
+            } else if (gyAddress[pixel] != 0) {
+                dir = 1.57;
             }
             
             // Check if maximum along gradient
@@ -267,7 +276,6 @@ typedef enum {
                     value = magAddress[pixel];
                 }
             }
-
 //            // Check if maximum along gradient
 //            if (dirAddress[pixel] >= -0.393 && dirAddress[pixel] < 0.393) { // [-pi/8,pi/8] E-W
 //                if (magAddress[pixel] > magAddress[pixel+1] && magAddress[pixel] > magAddress[pixel-1]) {
@@ -291,7 +299,7 @@ typedef enum {
             if (value > maxVal) {
                 value = 255;
             } else if (value > minVal) {
-                value = 200;
+                value = 100;
             } else {
                 value = 0;
             }
@@ -302,7 +310,7 @@ typedef enum {
     free(gyAddress);
     
     free(magAddress);
-    free(dirAddress);
+//    free(dirAddress);
 
 }
 
