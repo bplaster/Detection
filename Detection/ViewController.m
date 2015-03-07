@@ -172,29 +172,17 @@ typedef enum {
     
     int bytesPerPixel = 1;
     int bitsPerComponent = 8;
-    int greenValue = 0;
 
-//    for (int row = 0; row < bufferHeight; row++) {
-//        for (int column = 0; column < bufferWidth; column++) {
-//            //baseAddress[row*bytesPerRow + column*bytesPerPixel + 1] = greenValue;
-//        }
-//    }
     vImage_Buffer src = { baseAddress, height, width, bytesPerRow };
     vImage_Buffer dest = { newAddress, height, width, bytesPerRow };
-    unsigned char bgColor[4] = { 0, 0, 0, 0 };
-    const int16_t nKernel[25] = {2,4,5,4,2,4,9,12,9,4,5,12,15,12,5,4,9,12,9,4,2,4,5,4,2};
-    const int16_t vKernel[9] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
-    const int16_t hKernel[9] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
-
-    vImageConvolve_Planar8(&src, &dest, NULL, 0, 0, nKernel, 5, 5, 115, bgColor, kvImageBackgroundColorFill);
-    vImageConvolve_Planar8(&dest, &src, NULL, 0, 0, hKernel, 3, 3, 1, bgColor, kvImageBackgroundColorFill);
-    vImageConvolve_Planar8(&src, &dest, NULL, 0, 0, vKernel, 3, 3, 1, bgColor, kvImageBackgroundColorFill);
     
-
+    [self cannyDetector:src toDestination:dest withMinVal:50 andMaxVal:200];
+    
+    
 //    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
 //    CGContextRef context = CGBitmapContextCreate(baseAddress, bufferWidth, bufferHeight, bitsPerComponent, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
-    CGContextRef context = CGBitmapContextCreate(newAddress, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
+    CGContextRef context = CGBitmapContextCreate(dest.data, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
 
     CGImageRef imageRef = CGBitmapContextCreateImage(context);
     
@@ -207,6 +195,114 @@ typedef enum {
         [self.view.layer setContents: (__bridge id)imageRef];
         CGImageRelease(imageRef);
     });
+}
+
+// Canny edge detector
+// Notes:   Assumes you've already allocated memory for destination
+//          Assumes 1 byte per pixel
+- (void) cannyDetector: (vImage_Buffer)source toDestination: (vImage_Buffer)destination withMinVal:(int)minVal andMaxVal:(int)maxVal {
+    
+    size_t arraySize = source.rowBytes*source.height;
+    
+    // Gaussian
+    const int16_t gaussKernel[25] = {2,4,5,4,2,4,9,12,9,4,5,12,15,12,5,4,9,12,9,4,2,4,5,4,2};
+    vImageConvolve_Planar8(&source, &destination, NULL, 0, 0, gaussKernel, 5, 5, 115, 0, kvImageEdgeExtend);
+    
+    // Partial derivative arrays
+    unsigned char *gxAddress = malloc(arraySize);
+    unsigned char *gyAddress = malloc(arraySize);
+    vImage_Buffer gx = {gxAddress, source.height, source.width, source.rowBytes};
+    vImage_Buffer gy = {gyAddress, source.height, source.width, source.rowBytes};
+    
+    // Sobel
+    const int16_t vKernel[9] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
+    const int16_t hKernel[9] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
+    vImageConvolve_Planar8(&destination, &gx, NULL, 0, 0, hKernel, 3, 3, 1, 0, kvImageEdgeExtend);
+    vImageConvolve_Planar8(&destination, &gy, NULL, 0, 0, vKernel, 3, 3, 1, 0, kvImageEdgeExtend);
+    
+    // Direction and Magnitude
+    unsigned char *magAddress = malloc(arraySize);
+    signed char *dirAddress = malloc(arraySize);
+    unsigned long pixel = 0;
+    for (int row = 0; row < source.height; row++) {
+        for (int column = 0; column < source.width; column++) {
+            pixel = row*source.rowBytes + column;
+            magAddress[pixel] = sqrtf(powf(gxAddress[pixel], 2)+powf(gyAddress[pixel], 2)); // Could approximate by abs(gx) + abs(gy)
+//            if (gxAddress[pixel]) {
+//                dirAddress[pixel] = atanf(gyAddress[pixel]/gxAddress[pixel]);
+//            } else {
+//                dirAddress[pixel] = 0;
+//            }
+        }
+    }
+
+    // Non-maximal suppression && Double threshold
+    // TODO: need to handle border
+    int value = 0;
+    for (int row = 1; row < source.height-1; row++) {
+        for (int column = 1; column < source.width-1; column++) {
+            pixel = row*source.rowBytes + column;
+            value = 0;
+            
+            float dir = 0;
+            if (gxAddress[pixel]) {
+                dir = atanf(gyAddress[pixel]/gxAddress[pixel]);
+            }
+            
+            // Check if maximum along gradient
+            if (dir >= -0.393 && dir < 0.393) { // [-pi/8,pi/8] E-W
+                if (magAddress[pixel] > magAddress[pixel+1] && magAddress[pixel] > magAddress[pixel-1]) {
+                    value = magAddress[pixel];
+                }
+            } else if (dir >= 0.393 && dir < 1.178) { // [pi/8, 3pi/8] NE-SW
+                if (magAddress[pixel] > magAddress[(row-1)*source.rowBytes + (column-1)] && magAddress[pixel] > magAddress[(row+1)*source.rowBytes + (column+1)]) {
+                    value = magAddress[pixel];
+                }
+            } else if (dir >= -1.178 && dir < -0.393) { // NW-SE
+                if (magAddress[pixel] > magAddress[(row-1)*source.rowBytes + (column+1)] && magAddress[pixel] > magAddress[(row+1)*source.rowBytes + (column-1)]) {
+                    value = magAddress[pixel];
+                }
+            } else { // N-S
+                if (magAddress[pixel] > magAddress[(row-1)*source.rowBytes + column] && magAddress[pixel] > magAddress[(row+1)*source.rowBytes + column]) {
+                    value = magAddress[pixel];
+                }
+            }
+
+//            // Check if maximum along gradient
+//            if (dirAddress[pixel] >= -0.393 && dirAddress[pixel] < 0.393) { // [-pi/8,pi/8] E-W
+//                if (magAddress[pixel] > magAddress[pixel+1] && magAddress[pixel] > magAddress[pixel-1]) {
+//                    value = magAddress[pixel];
+//                }
+//            } else if (dirAddress[pixel] >= 0.393 && dirAddress[pixel] < 1.178) { // [pi/8, 3pi/8] NE-SW
+//                if (magAddress[pixel] > magAddress[(row-1)*source.rowBytes + (column-1)] && magAddress[pixel] > magAddress[(row+1)*source.rowBytes + (column+1)]) {
+//                    value = magAddress[pixel];
+//                }
+//            } else if (dirAddress[pixel] >= -1.178 && dirAddress[pixel] < -0.393) { // NW-SE
+//                if (magAddress[pixel] > magAddress[(row-1)*source.rowBytes + (column+1)] && magAddress[pixel] > magAddress[(row+1)*source.rowBytes + (column-1)]) {
+//                    value = magAddress[pixel];
+//                }
+//            } else { // N-S
+//                if (magAddress[pixel] > magAddress[(row-1)*source.rowBytes + column] && magAddress[pixel] > magAddress[(row+1)*source.rowBytes + column]) {
+//                    value = magAddress[pixel];
+//                }
+//            }
+            
+            // Double Threshold
+            if (value > maxVal) {
+                value = 255;
+            } else if (value > minVal) {
+                value = 200;
+            } else {
+                value = 0;
+            }
+            ((unsigned char *)destination.data)[row*destination.rowBytes + column] = value;
+        }
+    }
+    free(gxAddress);
+    free(gyAddress);
+    
+    free(magAddress);
+    free(dirAddress);
 
 }
 
