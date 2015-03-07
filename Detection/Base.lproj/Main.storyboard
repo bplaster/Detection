@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6254" systemVersion="14C109" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="BYZ-38-t0r">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="6247"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController id="BYZ-38-t0r" customClass="ViewController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="amO-Ax-Q5o">
+                                <rect key="frame" x="282" y="20" width="36" height="30"/>
+                                <state key="normal" title="Edge">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="qxH-1o-1zj">
+                                <rect key="frame" x="235" y="550" width="50" height="30"/>
+                                <state key="normal" title="Record">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="recordButtonPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="gL0-AS-Ems"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="BS2-vY-Ie9">
+                                <rect key="frame" x="325" y="550" width="30" height="30"/>
+                                <state key="normal" title="Play">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="playButtonPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="jl6-rs-SUt"/>
+                                </connections>
+                            </button>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="NMa-sz-kVI">
+                                <rect key="frame" x="140" y="228" width="240" height="128"/>
+                            </imageView>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstAttribute="centerX" secondItem="amO-Ax-Q5o" secondAttribute="centerX" id="6yH-CS-pUt"/>
+                            <constraint firstAttribute="centerY" secondItem="BS2-vY-Ie9" secondAttribute="centerY" constant="-265" id="8Bb-DL-R9Z"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="amO-Ax-Q5o" secondAttribute="bottom" constant="27" id="HqQ-ay-4Np"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="qxH-1o-1zj" secondAttribute="bottom" constant="20" id="Rrk-GJ-AEC"/>
+                            <constraint firstItem="amO-Ax-Q5o" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="WDE-vX-sbE"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="BS2-vY-Ie9" secondAttribute="bottom" constant="20" id="Zbh-Za-xfm"/>
+                            <constraint firstAttribute="centerX" secondItem="qxH-1o-1zj" secondAttribute="centerX" constant="40" id="vP0-QP-J6c"/>
+                            <constraint firstAttribute="centerX" secondItem="BS2-vY-Ie9" secondAttribute="centerX" constant="-40" id="vZX-aj-r0l"/>
+                        </constraints>
+                        <variation key="default">
+                            <mask key="constraints">
+                                <exclude reference="HqQ-ay-4Np"/>
+                                <exclude reference="8Bb-DL-R9Z"/>
+                            </mask>
+                        </variation>
+                    </view>
+                    <connections>
+                        <outlet property="previewImageView" destination="NMa-sz-kVI" id="dPl-zZ-bPa"/>
+                        <outlet property="recordButton" destination="qxH-1o-1zj" id="7CN-m1-yaE"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+        </scene>
+    </scenes>
+</document>
