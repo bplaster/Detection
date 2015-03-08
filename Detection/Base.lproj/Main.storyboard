@@ -2,7 +2,6 @@
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6254" systemVersion="14C109" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="BYZ-38-t0r">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="6247"/>
-        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
     </dependencies>
     <scenes>
         <!--View Controller-->
@@ -18,7 +17,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="qxH-1o-1zj">
-                                <rect key="frame" x="235" y="510" width="50" height="30"/>
+                                <rect key="frame" x="225" y="500" width="50" height="30"/>
                                 <state key="normal" title="Record">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
@@ -27,7 +26,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="BS2-vY-Ie9">
-                                <rect key="frame" x="325" y="510" width="30" height="30"/>
+                                <rect key="frame" x="335" y="500" width="30" height="30"/>
                                 <state key="normal" title="Play">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
@@ -41,37 +40,25 @@
                                     <action selector="toggleEdgeChanged:" destination="BYZ-38-t0r" eventType="valueChanged" id="MJG-Pu-8R6"/>
                                 </connections>
                             </switch>
-                            <slider opaque="NO" contentMode="scaleToFill" ambiguous="YES" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="0.5" minValue="0.0" maxValue="1" translatesAutoresizingMaskIntoConstraints="NO" id="NzK-Ac-0Te">
-                                <rect key="frame" x="458" y="285" width="128" height="31"/>
-                            </slider>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstAttribute="centerY" secondItem="NzK-Ac-0Te" secondAttribute="centerY" id="0hJ-qM-lsx"/>
                             <constraint firstAttribute="centerY" secondItem="BS2-vY-Ie9" secondAttribute="centerY" constant="-265" id="8Bb-DL-R9Z"/>
-                            <constraint firstAttribute="centerX" secondItem="NzK-Ac-0Te" secondAttribute="centerX" id="A07-x7-I0U"/>
                             <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="XfJ-d3-skC" secondAttribute="bottom" constant="20" id="ENi-Ny-0i7"/>
-                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="qxH-1o-1zj" secondAttribute="bottom" constant="60" id="Rrk-GJ-AEC"/>
-                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="BS2-vY-Ie9" secondAttribute="bottom" constant="60" id="Zbh-Za-xfm"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="qxH-1o-1zj" secondAttribute="bottom" constant="70" id="Rrk-GJ-AEC"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="BS2-vY-Ie9" secondAttribute="bottom" constant="70" id="Zbh-Za-xfm"/>
                             <constraint firstAttribute="centerX" secondItem="XfJ-d3-skC" secondAttribute="centerX" id="baN-IH-xUk"/>
-                            <constraint firstItem="NzK-Ac-0Te" firstAttribute="trailing" secondItem="8bC-Xf-vdC" secondAttribute="trailingMargin" id="jm9-p5-0gH"/>
-                            <constraint firstAttribute="centerY" secondItem="NzK-Ac-0Te" secondAttribute="centerY" id="sLO-z1-ra7"/>
-                            <constraint firstAttribute="centerX" secondItem="qxH-1o-1zj" secondAttribute="centerX" constant="40" id="vP0-QP-J6c"/>
-                            <constraint firstAttribute="centerX" secondItem="BS2-vY-Ie9" secondAttribute="centerX" constant="-40" id="vZX-aj-r0l"/>
-                            <constraint firstItem="NzK-Ac-0Te" firstAttribute="trailing" secondItem="8bC-Xf-vdC" secondAttribute="trailingMargin" id="wDo-w3-AMs"/>
+                            <constraint firstAttribute="centerX" secondItem="qxH-1o-1zj" secondAttribute="centerX" constant="50" id="vP0-QP-J6c"/>
+                            <constraint firstAttribute="centerX" secondItem="BS2-vY-Ie9" secondAttribute="centerX" constant="-50" id="vZX-aj-r0l"/>
                         </constraints>
                         <variation key="default">
                             <mask key="constraints">
-                                <exclude reference="A07-x7-I0U"/>
-                                <exclude reference="sLO-z1-ra7"/>
-                                <exclude reference="wDo-w3-AMs"/>
                                 <exclude reference="8Bb-DL-R9Z"/>
                             </mask>
                         </variation>
                     </view>
                     <connections>
                         <outlet property="recordButton" destination="qxH-1o-1zj" id="7CN-m1-yaE"/>
-                        <outlet property="thresholdSlider" destination="NzK-Ac-0Te" id="dTB-ph-cBd"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
