@@ -24,6 +24,7 @@ typedef enum {
 @property (strong, nonatomic) UISlider *minThresholdSlider;
 @property (strong, nonatomic) IBOutlet UIButton *recordButton;
 @property (nonatomic, strong) CALayer *previewLayer;
+
 //@property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
 
 // Variables
@@ -32,6 +33,7 @@ typedef enum {
 @property (nonatomic, strong) AVCaptureVideoDataOutput *videoOutput;
 @property (nonatomic, strong) AVAssetWriter *assetWriter;
 @property (nonatomic, strong) AVAssetWriterInput *assetWriterInput;
+@property (nonatomic, strong) AVAssetWriterInputPixelBufferAdaptor *assetWriterInputAdaptor;
 @property (nonatomic, strong) dispatch_queue_t assetWritingQueue;
 @property (nonatomic, strong) NSURL *fileURL;
 @property (nonatomic, assign) VFRecordingState recordingState;
@@ -48,7 +50,7 @@ typedef enum {
     // Do any additional setup after loading the view, typically from a nib.
     
     self.edgesEnabled = NO;
-    self.rotationState = 0;
+    [self orientationChanged];
     
     // Setup layer for preview
     self.previewLayer = [CALayer layer];
@@ -105,6 +107,19 @@ typedef enum {
                                              selector:@selector(orientationChanged)
                                                  name:UIDeviceOrientationDidChangeNotification
                                                object:nil];
+    
+    // Mirror the video
+    AVCaptureConnection *videoConnection = nil;
+    for (AVCaptureConnection *connection in self.videoOutput.connections) {
+        for (AVCaptureInputPort *port in [connection inputPorts]) {
+            if ([[port mediaType] isEqual:AVMediaTypeVideo] ) {
+                videoConnection = connection;
+                [videoConnection setVideoMirrored:YES];
+                break;
+            }
+        }
+        if (videoConnection) { break; }
+    }
 
     // Start
     [self.captureSession startRunning];
@@ -117,38 +132,21 @@ typedef enum {
 
 -(void) orientationChanged
 {
-    AVCaptureConnection *videoConnection = nil;
-    for (AVCaptureConnection *connection in self.videoOutput.connections) {
-        for (AVCaptureInputPort *port in [connection inputPorts]) {
-            if ([[port mediaType] isEqual:AVMediaTypeVideo] ) {
-                videoConnection = connection;
-                [videoConnection setVideoMirrored:YES];
-                break;
-            }
-        }
-        if (videoConnection) { break; }
-    }
-    
-    // TODO: Fix this so it rotates the buffer instead
     UIDeviceOrientation deviceOrientation = [UIDevice currentDevice].orientation;
     if (deviceOrientation == UIInterfaceOrientationPortraitUpsideDown){
-        [videoConnection setVideoOrientation:AVCaptureVideoOrientationPortraitUpsideDown];
-        self.rotationState = 2;
+        self.rotationState = 3;
     }
     
     else if (deviceOrientation == UIInterfaceOrientationPortrait){
-        [videoConnection setVideoOrientation:AVCaptureVideoOrientationPortrait];
         self.rotationState = 1;
     }
     
     else if (deviceOrientation == UIInterfaceOrientationLandscapeLeft){
-        [videoConnection setVideoOrientation:AVCaptureVideoOrientationLandscapeLeft];
-        self.rotationState = 3;
+        self.rotationState = 0;
     }
     
     else {
-        [videoConnection setVideoOrientation:AVCaptureVideoOrientationLandscapeRight];
-        self.rotationState = 0;
+        self.rotationState = 2;
     }
     
     [self updateViewPositions];
@@ -192,7 +190,30 @@ typedef enum {
     if ([[NSFileManager defaultManager] fileExistsAtPath:self.fileURL.path]) {
         MPMoviePlayerViewController *moviePlayerVC = [[MPMoviePlayerViewController alloc] initWithContentURL:self.fileURL];
         [self presentMoviePlayerViewControllerAnimated:moviePlayerVC];
+        
+        [[NSNotificationCenter defaultCenter] removeObserver:moviePlayerVC
+                                                        name:MPMoviePlayerPlaybackDidFinishNotification
+                                                      object:moviePlayerVC.moviePlayer];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(movieFinishedCallback:) name:MPMoviePlayerPlaybackDidFinishNotification object:[moviePlayerVC moviePlayer]];
     }
+}
+
+- (void)movieFinishedCallback:(NSNotification*)aNotification
+{
+    MPMoviePlayerController *moviePlayer = [aNotification object];
+        
+    // Remove this class from the observers
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                        name:MPMoviePlayerPlaybackDidFinishNotification
+                                                      object:moviePlayer];
+        
+    // Dismiss the view controller
+    [self dismissMoviePlayerViewControllerAnimated];
+    
+    // TODO: Attempting to address Apple's memory leak on iPad... not quite working
+    moviePlayer = NULL;
+    
 }
 
 - (void) stopRecording {
@@ -208,82 +229,146 @@ typedef enum {
 
 #pragma mark - AVCaptureVideoDataOutputSampleBufferDelegateMethods
 
-- (void) processPixelBuffer: (CVImageBufferRef) pixelBuffer {
+- (void) captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
+    
+    CVPixelBufferRef processedBuffer = [self processPixelBuffer:CMSampleBufferGetImageBuffer(sampleBuffer)];
+    
+    if (!self.assetWriterVideoInputReady) {
+        self.assetWriterVideoInputReady = [self setupVideoInput:CMSampleBufferGetFormatDescription(sampleBuffer)];
+    }
+    
+    switch (self.recordingState) {
+        case VFRecordingStateFinished: {
+            break;
+        }
+        case VFRecordingStateRecording: {
+            if (self.assetWriter) {
+                CMTime sampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
+
+                CVPixelBufferRetain(processedBuffer);
+                dispatch_async(self.assetWritingQueue, ^{
+                    if (self.assetWriter.status == AVAssetWriterStatusUnknown) {
+                        if ([self.assetWriter startWriting]) {
+                            [self.assetWriter startSessionAtSourceTime:sampleTime];
+                        }
+                    }
+                    if (self.assetWriter.status == AVAssetWriterStatusWriting) {
+                        if (self.assetWriterInput.isReadyForMoreMediaData) {
+                            [self.assetWriterInputAdaptor appendPixelBuffer:processedBuffer withPresentationTime:sampleTime];
+                        }
+                    }
+                    CVPixelBufferRelease(processedBuffer);
+                });
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    CVPixelBufferRelease(processedBuffer);
+
+}
+
+
+- (CVPixelBufferRef) processPixelBuffer: (CVImageBufferRef) pixelBuffer {
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
     
-//    size_t bufferWidth = CVPixelBufferGetWidth(pixelBuffer);
-//    size_t bufferHeight = CVPixelBufferGetHeight(pixelBuffer);
-//    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer);
-//    unsigned char *baseAddress = (unsigned char *)CVPixelBufferGetBaseAddress(pixelBuffer);
-
-//    if (self.rotationState) {
-//        vImageRotate90_Planar8(<#const vImage_Buffer *src#>, <#const vImage_Buffer *dest#>, <#uint8_t rotationConstant#>, <#Pixel_8 backColor#>, <#vImage_Flags flags#>)
-//
-//    }
+    size_t srcWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
+    size_t srcHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
+    size_t srcBytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
+    size_t dstHeight = srcHeight;
+    size_t dstWidth = srcWidth;
+    size_t dstBytesPerRow = srcBytesPerRow;
     
-    size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
-    size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
-    size_t bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
-    unsigned char *baseAddress = (unsigned char *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
-    unsigned char *destAddress = malloc(bytesPerRow*height);
+    if (self.rotationState == 1 || self.rotationState == 3) {
+        dstHeight = srcWidth;
+        dstWidth = srcHeight;
+        dstBytesPerRow = dstWidth*sizeof(unsigned char);
+    }
+    
+    unsigned char *srcAddress = (unsigned char *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
+    unsigned char *tmpAddress = malloc(srcBytesPerRow*srcHeight);
+    unsigned char *dstAddress = malloc(dstBytesPerRow*dstHeight);
+
     int bitsPerComponent = 8;
     
-    vImage_Buffer src = { baseAddress, height, width, bytesPerRow };
+    vImage_Buffer src = { srcAddress, srcHeight, srcWidth, srcBytesPerRow };
+    vImage_Buffer tmp = { tmpAddress, srcHeight, srcWidth, srcBytesPerRow };
+    vImage_Buffer dst = { dstAddress, dstHeight, dstWidth, dstBytesPerRow };
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
     CGContextRef context;
 
     if (self.edgesEnabled) {
-        vImage_Buffer dest = {destAddress, height, width, bytesPerRow };
-        [self cannyDetector:src toDestination:dest withMinVal:self.minThresholdSlider.value*self.maxThresholdSlider.value andMaxVal:self.maxThresholdSlider.value];
-        context = CGBitmapContextCreate(destAddress, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
+        [self cannyDetector:&src toDestination:&tmp withMinVal:self.minThresholdSlider.value*self.maxThresholdSlider.value andMaxVal:self.maxThresholdSlider.value];
+    
     } else {
-        context = CGBitmapContextCreate(baseAddress, width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaNone);
+        vImageCopyBuffer(&src, &tmp, 1, kvImageNoFlags);
     }
     
+    vImageRotate90_Planar8(&tmp, &dst, self.rotationState, 0, kvImageNoFlags);
+
+    context = CGBitmapContextCreate(dstAddress, dstWidth, dstHeight, bitsPerComponent, dstBytesPerRow, colorSpace, kCGImageAlphaNone);
     CGImageRef imageRef = CGBitmapContextCreateImage(context);
+    
+    free(dstAddress);
     
     CGContextRelease(context);
     CGColorSpaceRelease(colorSpace);
     CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
-    free(destAddress);
     
+    // Display in view
     dispatch_sync(dispatch_get_main_queue(), ^{
         [self.view.layer setContents: (__bridge id)imageRef];
         CGImageRelease(imageRef);
     });
+    
+    // Create new pixel buffer
+    CVPixelBufferRef processedBuffer = NULL;
+    CVReturn status = CVPixelBufferCreateWithBytes(NULL, srcWidth, srcHeight, kCVPixelFormatType_OneComponent8, tmpAddress, srcBytesPerRow, pixelBufferReleaseCallback, NULL, NULL, &processedBuffer);
+   
+//    free(tmpAddress);
+
+
+    return processedBuffer;
+    
+}
+
+void pixelBufferReleaseCallback (void *releaseRefCon, const void *baseAddress)
+{
+    free((void *)baseAddress);
 }
 
 // Canny edge detector
 // Notes:   Assumes you've already allocated memory for destination
 //          Assumes 1 byte per pixel
-- (void) cannyDetector: (vImage_Buffer)source toDestination: (vImage_Buffer)destination withMinVal:(int)minVal andMaxVal:(int)maxVal {
+- (void) cannyDetector: (vImage_Buffer *)source toDestination: (vImage_Buffer *)destination withMinVal:(int)minVal andMaxVal:(int)maxVal {
     
-    unsigned char *destAddress = (unsigned char *)destination.data;
-    size_t arraySize = source.rowBytes*source.height;
+    unsigned char *destAddress = (unsigned char *)destination->data;
+    size_t arraySize = source->rowBytes*source->height;
     
     // Gaussian
     const int16_t gaussKernel[25] = {2,4,5,4,2,4,9,12,9,4,5,12,15,12,5,4,9,12,9,4,2,4,5,4,2};
-    vImageConvolve_Planar8(&source, &destination, NULL, 0, 0, gaussKernel, 5, 5, 115, 0, kvImageEdgeExtend);
+    vImageConvolve_Planar8(source, destination, NULL, 0, 0, gaussKernel, 5, 5, 115, 0, kvImageEdgeExtend);
     
     // Partial derivative arrays
     signed char *gxAddress = malloc(arraySize);
     signed char *gyAddress = malloc(arraySize);
-    vImage_Buffer gx = {gxAddress, source.height, source.width, source.rowBytes};
-    vImage_Buffer gy = {gyAddress, source.height, source.width, source.rowBytes};
+    vImage_Buffer gx = {gxAddress, source->height, source->width, source->rowBytes};
+    vImage_Buffer gy = {gyAddress, source->height, source->width, source->rowBytes};
     
     // Sobel
     const int16_t vKernel[9] = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
     const int16_t hKernel[9] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
-    vImageConvolve_Planar8(&destination, &gx, NULL, 0, 0, hKernel, 3, 3, 1, 0, kvImageEdgeExtend);
-    vImageConvolve_Planar8(&destination, &gy, NULL, 0, 0, vKernel, 3, 3, 1, 0, kvImageEdgeExtend);
+    vImageConvolve_Planar8(destination, &gx, NULL, 0, 0, hKernel, 3, 3, 1, 0, kvImageEdgeExtend);
+    vImageConvolve_Planar8(destination, &gy, NULL, 0, 0, vKernel, 3, 3, 1, 0, kvImageEdgeExtend);
     
     // Direction and Magnitude
     unsigned char *magAddress = malloc(arraySize);
     unsigned long pixel = 0;
-    for (int row = 0; row < source.height; row++) {
-        for (int column = 0; column < source.width; column++) {
-            pixel = row*source.rowBytes + column;
+    for (int row = 0; row < source->height; row++) {
+        for (int column = 0; column < source->width; column++) {
+            pixel = row*source->rowBytes + column;
             magAddress[pixel] = sqrtf(powf(gxAddress[pixel], 2)+powf(gyAddress[pixel], 2)); // Could approximate by abs(gx) + abs(gy)
         }
     }
@@ -293,9 +378,9 @@ typedef enum {
     int value = 0;
 //    int weakValue = 100;
     int strongValue = 255;
-    for (int row = 1; row < source.height-1; row++) {
-        for (int column = 1; column < source.width-1; column++) {
-            pixel = row*source.rowBytes + column;
+    for (int row = 1; row < source->height-1; row++) {
+        for (int column = 1; column < source->width-1; column++) {
+            pixel = row*source->rowBytes + column;
             value = magAddress[pixel];
             
             // Determine gradient direction
@@ -308,15 +393,15 @@ typedef enum {
             
             // Check if maximum along gradient
             if (dir >= -0.393 && dir < 0.393) { // [-pi/8,pi/8]
-                if (value < magAddress[(row-1)*source.rowBytes + column] || value < magAddress[(row+1)*source.rowBytes + column]) {
+                if (value < magAddress[(row-1)*source->rowBytes + column] || value < magAddress[(row+1)*source->rowBytes + column]) {
                     value = 0;
                 }
             } else if (dir >= 0.393 && dir < 1.178) { // [pi/8, 3pi/8]
-                if (value < magAddress[(row-1)*source.rowBytes + (column+1)] || value < magAddress[(row+1)*source.rowBytes + (column-1)]) {
+                if (value < magAddress[(row-1)*source->rowBytes + (column+1)] || value < magAddress[(row+1)*source->rowBytes + (column-1)]) {
                     value = 0;
                 }
             } else if (dir >= -1.178 && dir < -0.393) { // [-3pi/8,-pi/8]
-                if (value < magAddress[(row-1)*source.rowBytes + (column-1)] || value < magAddress[(row+1)*source.rowBytes + (column+1)]) {
+                if (value < magAddress[(row-1)*source->rowBytes + (column-1)] || value < magAddress[(row+1)*source->rowBytes + (column+1)]) {
                     value = 0;
                 }
             } else {
@@ -328,8 +413,8 @@ typedef enum {
             // Double Threshold
             if (value > maxVal) {
                 value = strongValue;
-            } else if (value > minVal && (destAddress[pixel-1] == strongValue || destAddress[(row-1)*source.rowBytes + column] == strongValue
-                                          || destAddress[(row-1)*source.rowBytes + (column-1)] == strongValue)) {
+            } else if (value > minVal && (destAddress[pixel-1] == strongValue || destAddress[(row-1)*source->rowBytes + column] == strongValue
+                                          || destAddress[(row-1)*source->rowBytes + (column-1)] == strongValue)) {
                 value = strongValue;
             } else {
                 value = 0;
@@ -360,43 +445,6 @@ typedef enum {
 //    }
 }
 
-- (void) captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
-    
-    CVImageBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    [self processPixelBuffer:pixelBuffer];
-    
-    if (!self.assetWriterVideoInputReady) {
-        self.assetWriterVideoInputReady = [self setupVideoInput:CMSampleBufferGetFormatDescription(sampleBuffer)];
-    }
-    
-    switch (self.recordingState) {
-        case VFRecordingStateFinished: {
-            break;
-        }
-        case VFRecordingStateRecording: {
-            if (self.assetWriter) {
-                CFRetain(sampleBuffer);
-                dispatch_async(self.assetWritingQueue, ^{
-                    if (self.assetWriter.status == AVAssetWriterStatusUnknown) {
-                        if ([self.assetWriter startWriting]) {
-                            CMTime startTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
-                            [self.assetWriter startSessionAtSourceTime:startTime];
-                        }
-                    }
-                    if (self.assetWriter.status == AVAssetWriterStatusWriting) {
-                        if (self.assetWriterInput.isReadyForMoreMediaData) {
-                            [self.assetWriterInput appendSampleBuffer:sampleBuffer];
-                        }
-                    }
-                    CFRelease(sampleBuffer);
-                });
-            }
-            break;
-        }
-        default:
-            break;
-    }
-}
 
 
 
@@ -426,8 +474,28 @@ typedef enum {
     
     self.assetWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
     
+    CGAffineTransform trans;
+    
+    UIDeviceOrientation deviceOrientation = [UIDevice currentDevice].orientation;
+    if (deviceOrientation == UIInterfaceOrientationPortraitUpsideDown){
+        trans = CGAffineTransformMakeRotation(M_PI * 0.5);
+    }
+    else if (deviceOrientation == UIInterfaceOrientationPortrait){
+        trans = CGAffineTransformMakeRotation(M_PI * -0.5);
+    }
+    else if (deviceOrientation == UIInterfaceOrientationLandscapeLeft){
+        trans = CGAffineTransformMakeRotation(0);
+    }
+    else {
+        trans = CGAffineTransformMakeRotation(M_PI);
+    }
+    
+    self.assetWriterInput.transform = trans;
+    self.assetWriterInputAdaptor = [AVAssetWriterInputPixelBufferAdaptor assetWriterInputPixelBufferAdaptorWithAssetWriterInput:self.assetWriterInput sourcePixelBufferAttributes:[NSDictionary dictionaryWithObjectsAndKeys:
+                                        [NSNumber numberWithInt:kCVPixelFormatType_OneComponent8],kCVPixelBufferPixelFormatTypeKey, nil]];
+    
     if ([self.assetWriter canAddInput:self.assetWriterInput]) {
-        NSLog(@"Adding input to asset writer");
+//        NSLog(@"Adding input to asset writer");
         [self.assetWriter addInput:self.assetWriterInput];
         return YES;
     } else {
