@@ -37,6 +37,7 @@ typedef enum {
 @property (nonatomic, assign) VFRecordingState recordingState;
 @property (nonatomic, assign) BOOL edgesEnabled;
 @property (nonatomic, assign) BOOL assetWriterVideoInputReady;
+@property (nonatomic, assign) uint8_t rotationState;
 
 @end
 
@@ -47,6 +48,7 @@ typedef enum {
     // Do any additional setup after loading the view, typically from a nib.
     
     self.edgesEnabled = NO;
+    self.rotationState = 0;
     
     // Setup layer for preview
     self.previewLayer = [CALayer layer];
@@ -129,17 +131,25 @@ typedef enum {
     
     // TODO: Fix this so it rotates the buffer instead
     UIDeviceOrientation deviceOrientation = [UIDevice currentDevice].orientation;
-    if (deviceOrientation == UIInterfaceOrientationPortraitUpsideDown)
+    if (deviceOrientation == UIInterfaceOrientationPortraitUpsideDown){
         [videoConnection setVideoOrientation:AVCaptureVideoOrientationPortraitUpsideDown];
+        self.rotationState = 2;
+    }
     
-    else if (deviceOrientation == UIInterfaceOrientationPortrait)
+    else if (deviceOrientation == UIInterfaceOrientationPortrait){
         [videoConnection setVideoOrientation:AVCaptureVideoOrientationPortrait];
+        self.rotationState = 1;
+    }
     
-    else if (deviceOrientation == UIInterfaceOrientationLandscapeLeft)
+    else if (deviceOrientation == UIInterfaceOrientationLandscapeLeft){
         [videoConnection setVideoOrientation:AVCaptureVideoOrientationLandscapeLeft];
+        self.rotationState = 3;
+    }
     
-    else
+    else {
         [videoConnection setVideoOrientation:AVCaptureVideoOrientationLandscapeRight];
+        self.rotationState = 0;
+    }
     
     [self updateViewPositions];
 }
@@ -206,6 +216,11 @@ typedef enum {
 //    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer);
 //    unsigned char *baseAddress = (unsigned char *)CVPixelBufferGetBaseAddress(pixelBuffer);
 
+//    if (self.rotationState) {
+//        vImageRotate90_Planar8(<#const vImage_Buffer *src#>, <#const vImage_Buffer *dest#>, <#uint8_t rotationConstant#>, <#Pixel_8 backColor#>, <#vImage_Flags flags#>)
+//
+//    }
+    
     size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
     size_t bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
@@ -276,13 +291,14 @@ typedef enum {
     // Non-maximal suppression && Double threshold
     // TODO: need to handle border
     int value = 0;
-    int weakValue = 100;
+//    int weakValue = 100;
     int strongValue = 255;
     for (int row = 1; row < source.height-1; row++) {
         for (int column = 1; column < source.width-1; column++) {
             pixel = row*source.rowBytes + column;
             value = magAddress[pixel];
             
+            // Determine gradient direction
             float dir = 0;
             if (gxAddress[pixel]) {
                 dir = atanf(gyAddress[pixel]/gxAddress[pixel]);
