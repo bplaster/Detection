@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6254" systemVersion="14C109" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="BYZ-38-t0r">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6751" systemVersion="14C109" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="BYZ-38-t0r">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="6247"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="6736"/>
     </dependencies>
     <scenes>
         <!--View Controller-->
@@ -16,53 +16,44 @@
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="qxH-1o-1zj">
-                                <rect key="frame" x="225" y="500" width="50" height="30"/>
-                                <state key="normal" title="Record">
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="n5k-my-nQB">
+                                <rect key="frame" x="223" y="495" width="54" height="30"/>
+                                <state key="normal" title="Camera">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
-                                    <action selector="recordButtonPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="gL0-AS-Ems"/>
+                                    <segue destination="Dzb-Rc-fEg" kind="show" id="ntj-NN-Y2B"/>
                                 </connections>
                             </button>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="BS2-vY-Ie9">
-                                <rect key="frame" x="335" y="500" width="30" height="30"/>
-                                <state key="normal" title="Play">
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="OgP-5H-mzm">
+                                <rect key="frame" x="326" y="495" width="48" height="30"/>
+                                <state key="normal" title="Gallery">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
-                                    <action selector="playButtonPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="jl6-rs-SUt"/>
+                                    <action selector="galleryButtonPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="ktd-vY-nxv"/>
                                 </connections>
                             </button>
-                            <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="XfJ-d3-skC">
-                                <rect key="frame" x="276" y="549" width="51" height="31"/>
-                                <connections>
-                                    <action selector="toggleEdgeChanged:" destination="BYZ-38-t0r" eventType="valueChanged" id="MJG-Pu-8R6"/>
-                                </connections>
-                            </switch>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstAttribute="centerY" secondItem="BS2-vY-Ie9" secondAttribute="centerY" constant="-265" id="8Bb-DL-R9Z"/>
-                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="XfJ-d3-skC" secondAttribute="bottom" constant="20" id="ENi-Ny-0i7"/>
-                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="qxH-1o-1zj" secondAttribute="bottom" constant="70" id="Rrk-GJ-AEC"/>
-                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="BS2-vY-Ie9" secondAttribute="bottom" constant="70" id="Zbh-Za-xfm"/>
-                            <constraint firstAttribute="centerX" secondItem="XfJ-d3-skC" secondAttribute="centerX" id="baN-IH-xUk"/>
-                            <constraint firstAttribute="centerX" secondItem="qxH-1o-1zj" secondAttribute="centerX" constant="50" id="vP0-QP-J6c"/>
-                            <constraint firstAttribute="centerX" secondItem="BS2-vY-Ie9" secondAttribute="centerX" constant="-50" id="vZX-aj-r0l"/>
+                            <constraint firstAttribute="centerX" secondItem="n5k-my-nQB" secondAttribute="centerX" constant="50" id="278-CJ-EFS"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="OgP-5H-mzm" secondAttribute="bottom" constant="75" id="5fR-c4-WJi"/>
+                            <constraint firstAttribute="centerX" secondItem="OgP-5H-mzm" secondAttribute="centerX" constant="-50" id="e38-Tl-K8Q"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="n5k-my-nQB" secondAttribute="bottom" constant="75" id="y9w-mb-uK1"/>
                         </constraints>
-                        <variation key="default">
-                            <mask key="constraints">
-                                <exclude reference="8Bb-DL-R9Z"/>
-                            </mask>
-                        </variation>
                     </view>
-                    <connections>
-                        <outlet property="recordButton" destination="qxH-1o-1zj" id="7CN-m1-yaE"/>
-                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
+        </scene>
+        <!--Live View Controller-->
+        <scene sceneID="cD9-p3-i5x">
+            <objects>
+                <viewController id="Dzb-Rc-fEg" customClass="LiveViewController" sceneMemberID="viewController"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="KyJ-dR-s3z" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1068" y="339"/>
         </scene>
     </scenes>
 </document>

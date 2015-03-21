@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A7EBC1D1AB8C8450088868D /* LiveViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A7EBC1B1AB8C8450088868D /* LiveViewController.m */; };
+		1A7EBC1E1AB8C8450088868D /* LiveViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1A7EBC1C1AB8C8450088868D /* LiveViewController.xib */; };
+		1A7EBC221AB8D2270088868D /* ImageViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A7EBC201AB8D2270088868D /* ImageViewController.m */; };
+		1A7EBC231AB8D2270088868D /* ImageViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1A7EBC211AB8D2270088868D /* ImageViewController.xib */; };
 		1A7F91CE1AAA26DD00679106 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A7F91CD1AAA26DD00679106 /* main.m */; };
 		1A7F91D11AAA26DD00679106 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A7F91D01AAA26DD00679106 /* AppDelegate.m */; };
 		1A7F91D41AAA26DD00679106 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A7F91D31AAA26DD00679106 /* ViewController.m */; };
@@ -14,6 +18,7 @@
 		1A7F91D91AAA26DD00679106 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A7F91D81AAA26DD00679106 /* Images.xcassets */; };
 		1A7F91DC1AAA26DD00679106 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1A7F91DA1AAA26DD00679106 /* LaunchScreen.xib */; };
 		1A7F91E81AAA26DD00679106 /* DetectionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A7F91E71AAA26DD00679106 /* DetectionTests.m */; };
+		1A9EF6FC1ABA2BC40018CA45 /* BufferProcessor.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A9EF6FB1ABA2BC40018CA45 /* BufferProcessor.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +32,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1A7EBC1A1AB8C8450088868D /* LiveViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LiveViewController.h; sourceTree = "<group>"; };
+		1A7EBC1B1AB8C8450088868D /* LiveViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LiveViewController.m; sourceTree = "<group>"; };
+		1A7EBC1C1AB8C8450088868D /* LiveViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = LiveViewController.xib; sourceTree = "<group>"; };
+		1A7EBC1F1AB8D2270088868D /* ImageViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageViewController.h; sourceTree = "<group>"; };
+		1A7EBC201AB8D2270088868D /* ImageViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ImageViewController.m; sourceTree = "<group>"; };
+		1A7EBC211AB8D2270088868D /* ImageViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ImageViewController.xib; sourceTree = "<group>"; };
 		1A7F91C81AAA26DD00679106 /* Detection.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Detection.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A7F91CC1AAA26DD00679106 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A7F91CD1AAA26DD00679106 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
@@ -40,6 +51,8 @@
 		1A7F91E11AAA26DD00679106 /* DetectionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DetectionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A7F91E61AAA26DD00679106 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A7F91E71AAA26DD00679106 /* DetectionTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DetectionTests.m; sourceTree = "<group>"; };
+		1A9EF6FA1ABA2BC40018CA45 /* BufferProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferProcessor.h; sourceTree = "<group>"; };
+		1A9EF6FB1ABA2BC40018CA45 /* BufferProcessor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BufferProcessor.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,6 +100,14 @@
 				1A7F91D31AAA26DD00679106 /* ViewController.m */,
 				1A7F91D51AAA26DD00679106 /* Main.storyboard */,
 				1A7F91D81AAA26DD00679106 /* Images.xcassets */,
+				1A7EBC1A1AB8C8450088868D /* LiveViewController.h */,
+				1A7EBC1B1AB8C8450088868D /* LiveViewController.m */,
+				1A7EBC1C1AB8C8450088868D /* LiveViewController.xib */,
+				1A7EBC1F1AB8D2270088868D /* ImageViewController.h */,
+				1A7EBC201AB8D2270088868D /* ImageViewController.m */,
+				1A7EBC211AB8D2270088868D /* ImageViewController.xib */,
+				1A9EF6FA1ABA2BC40018CA45 /* BufferProcessor.h */,
+				1A9EF6FB1ABA2BC40018CA45 /* BufferProcessor.m */,
 				1A7F91DA1AAA26DD00679106 /* LaunchScreen.xib */,
 				1A7F91CB1AAA26DD00679106 /* Supporting Files */,
 			);
@@ -199,8 +220,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A7EBC231AB8D2270088868D /* ImageViewController.xib in Resources */,
 				1A7F91D71AAA26DD00679106 /* Main.storyboard in Resources */,
 				1A7F91DC1AAA26DD00679106 /* LaunchScreen.xib in Resources */,
+				1A7EBC1E1AB8C8450088868D /* LiveViewController.xib in Resources */,
 				1A7F91D91AAA26DD00679106 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -219,8 +242,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A7EBC221AB8D2270088868D /* ImageViewController.m in Sources */,
 				1A7F91D41AAA26DD00679106 /* ViewController.m in Sources */,
+				1A9EF6FC1ABA2BC40018CA45 /* BufferProcessor.m in Sources */,
 				1A7F91D11AAA26DD00679106 /* AppDelegate.m in Sources */,
+				1A7EBC1D1AB8C8450088868D /* LiveViewController.m in Sources */,
 				1A7F91CE1AAA26DD00679106 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -348,6 +374,7 @@
 				INFOPLIST_FILE = Detection/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -358,6 +385,7 @@
 				INFOPLIST_FILE = Detection/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -414,6 +442,7 @@
 				1A7F91ED1AAA26DD00679106 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		1A7F91EE1AAA26DD00679106 /* Build configuration list for PBXNativeTarget "DetectionTests" */ = {
 			isa = XCConfigurationList;
@@ -422,6 +451,7 @@
 				1A7F91F01AAA26DD00679106 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
