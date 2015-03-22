@@ -13,6 +13,8 @@
 
 @property (nonatomic, strong) UISlider *maxThresholdSlider;
 @property (nonatomic, strong) UISlider *radiusSlider;
+@property (nonatomic, strong) UIImageView *topImageView;
+@property (nonatomic, strong) UIImageView *bottomImageView;
 
 @property (nonatomic, assign) CGSize screenSize;
 
@@ -32,6 +34,10 @@
     // Do any additional setup after loading the view from its nib.
     
     self.screenSize = ([UIScreen mainScreen]).bounds.size;
+    self.topImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, self.screenSize.width, self.screenSize.height/2)];
+    self.bottomImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, self.screenSize.height/2, self.screenSize.width, self.screenSize.height/2)];
+    [self.view insertSubview:self.topImageView atIndex:0];
+    [self.view insertSubview:self.bottomImageView atIndex:0];
     
     // Max threshold for Canny
     self.maxThresholdSlider = [[UISlider alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
@@ -54,7 +60,6 @@
     [self refreshImageView];
 }
 
-// TODO: Fix location
 - (void) updateViewPositions {
     int padding = 10;
     self.maxThresholdSlider.center = CGPointMake(self.screenSize.width - self.maxThresholdSlider.bounds.size.height/2 - padding, self.screenSize.height/2 - self.maxThresholdSlider.bounds.size.width/2 - padding);
@@ -68,10 +73,11 @@
 - (void)refreshImageView {
     
     // Info for original image
+    [self.topImageView setImage: self.image];
     CGImageRef imageRef = [self.image CGImage];
     NSUInteger width = CGImageGetWidth(imageRef);
     NSUInteger height = CGImageGetHeight(imageRef);
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
+    CGColorSpaceRef graySpace = CGColorSpaceCreateDeviceGray();
     NSUInteger bytesPerRow = width*sizeof(unsigned char);
     NSUInteger bitsPerComponent = 8;
     unsigned char *srcAddress = (unsigned char*) malloc(height * bytesPerRow);
@@ -82,27 +88,69 @@
     // Copy original image into buffer
     CGContextRef context = CGBitmapContextCreate(srcAddress, width, height,
                                                  bitsPerComponent, bytesPerRow,
-                                                 colorSpace, kCGImageAlphaNone);
+                                                 graySpace, kCGImageAlphaNone);
     CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
     CGContextRelease(context);
     
+    // Hough space
+    int radius = self.radiusSlider.value;
+    size_t houghRowBytes = 2*radius+bytesPerRow;
+    size_t houghHeight = 2*radius+height;
+    size_t houghWidth = 2*radius + width;
+    unsigned char *houghAddress = calloc(houghRowBytes*houghHeight, 1);
+    vImage_Buffer hough = {houghAddress, houghHeight, houghWidth, houghRowBytes};
+
     // Do processing on buffer
     [BufferProcessor cannyDetector:&src toDestination:&dst withMinVal:self.maxThresholdSlider.value*(2./3.) andMaxVal:self.maxThresholdSlider.value];
-    int total = [BufferProcessor detectCircles:&dst withRadius:self.radiusSlider.value useGradient:NO];
+    int total = [BufferProcessor detectCircles:&dst withRadius:radius useGradient:NO outputHough:&hough];
     NSLog(@"Found %i circles",total);
     free(srcAddress);
-
+    
     // Create new image
-    CGContextRef newContext = CGBitmapContextCreate(dstAddress, width, height,
-                                                 bitsPerComponent, bytesPerRow,
-                                                 colorSpace, kCGImageAlphaNone);
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    unsigned char *newAddress = (unsigned char*) malloc(4 * height * bytesPerRow);
+
+    CGContextRef newContext = CGBitmapContextCreate(newAddress, width, height,
+                                                 bitsPerComponent, 4*bytesPerRow,
+                                                 colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    CGContextDrawImage(newContext, CGRectMake(0, 0, width, height), imageRef);
+    
+    // Overlay circles onto original image
+    unsigned long grayPixel = 0, colorPixel = 0;
+    for (int row = 0; row < height; row++) {
+        for (int column = 0; column < width; column++) {
+            grayPixel = row * bytesPerRow + column;
+            colorPixel = 4 * (row * bytesPerRow + column);
+            if (dstAddress[grayPixel]) {
+                newAddress[colorPixel] = 255;
+                newAddress[colorPixel+1] = 255;
+                newAddress[colorPixel+2] = 255;
+
+            }
+        }
+    }
+    
     CGImageRef newImageRef = CGBitmapContextCreateImage(newContext);
     CGContextRelease(newContext);
     free(dstAddress);
+    free(newAddress);
+    
+    // Create Hough image
+    CGContextRef houghContext = CGBitmapContextCreate(houghAddress, houghWidth, houghHeight,
+                                                    bitsPerComponent, houghRowBytes,
+                                                    graySpace, kCGImageAlphaNone);
+    CGImageRef houghImageRef = CGBitmapContextCreateImage(houghContext);
+    CGContextRelease(houghContext);
+    free(houghAddress);
+    
+    // Free colorspace
     CGColorSpaceRelease(colorSpace);
+    CGColorSpaceRelease(graySpace);
 
     // Display the image
-    [self.view.layer setContents: (__bridge id)newImageRef];
+    [self.bottomImageView setImage:[UIImage imageWithCGImage:houghImageRef]];
+    [self.topImageView setImage:[UIImage imageWithCGImage:newImageRef]];
+//    [self.view.layer setContents: (__bridge id)newImageRef];
 
 }
 
