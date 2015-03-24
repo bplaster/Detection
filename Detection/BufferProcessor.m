@@ -224,7 +224,7 @@
             vImage_Buffer hsv = { hsvAddress, height, width, bytesPerRow };
             
             [self convertRGBImage:src toHSVDestination:&hsv];
-//            [self kMeans:k forHSVImage:&hsv toDestination:&hsv];
+            [self kMeans:k forHSVImage:&hsv toDestination:&hsv];
             [self convertHSVImage:&hsv toRGBDestination:dst];
             free(hsvAddress);
             break;
@@ -392,7 +392,8 @@
 + (void)convertRGBImage: (vImage_Buffer *)src toHSVDestination: (vImage_Buffer *)dst {
     unsigned char * srcAddress = src->data;
     unsigned char * dstAddress = dst->data;
-    CGFloat h = 0, s, v, r, g, b, a, cMin, cMax, delta;
+    CGFloat h = 0, s, v, r, g, b, a;
+    UIColor *color;
     unsigned long rgbaPixel, hsvPixel;
     for (int row = 0; row < src->height; row++) {
         for (int column = 0; column < src->width; column++) {
@@ -403,38 +404,12 @@
             g = (CGFloat)srcAddress[rgbaPixel + 1]/255.;
             b = (CGFloat)srcAddress[rgbaPixel + 2]/255.;
             
-            UIColor *color = [UIColor colorWithRed:r green:g blue:b alpha:1.0];
+            color = [UIColor colorWithRed:r green:g blue:b alpha:1.0];
             [color getHue:&h saturation:&s brightness:&v alpha:&a];
             
 
-//            cMin = fminf(fminf(r, g),b);
-//            cMax = fmaxf(fmaxf(r, g),b);
-//            delta = cMax - cMin;
-//            
-//            // Hue calculation
-//            if (delta == 0) {
-//                h = 0;
-//            } else if (r == cMax) {
-//                h = fmodf((g-b)/delta, 6);
-//            } else if(g == cMax) {
-//                h = (b-r)/delta + 2;
-//            } else if (b == cMax){
-//                h = (r-g)/delta + 4;
-//            }
-//            h *= 60;
-//
-//            // Saturation calculation
-//            if (cMax == 0) {
-//                s = 0;
-//            } else {
-//                s = 100*delta/cMax;
-//            }
-//            
-//            // Value calcuation
-//            v = 100*cMax;
-            
             // Set values
-            dstAddress[hsvPixel] = (int)360*h;
+            dstAddress[hsvPixel] = (int)100*h;
             dstAddress[hsvPixel + 1] = (int)100*s;
             dstAddress[hsvPixel + 2] = (int)100*v;
         }
@@ -444,53 +419,20 @@
 + (void)convertHSVImage: (vImage_Buffer *)src toRGBDestination: (vImage_Buffer *)dst {
     unsigned char * srcAddress = src->data;
     unsigned char * dstAddress = dst->data;
-    CGFloat h, s, v, S, V, C, X, m, r = 0, g = 0, b = 0, a = 1;
+    CGFloat h, s, v, r = 0, g = 0, b = 0, a = 1;
+    UIColor *color;
     unsigned long rgbaPixel, hsvPixel;
     for (int row = 0; row < src->height; row++) {
         for (int column = 0; column < src->width; column++) {
             hsvPixel = row*src->rowBytes + 3*column;
             rgbaPixel = row*dst->rowBytes + 4*column;
 
-            h = (CGFloat)srcAddress[hsvPixel]/360;
+            h = (CGFloat)srcAddress[hsvPixel]/100;
             s = (CGFloat)srcAddress[hsvPixel + 1]/100;
             v = (CGFloat)srcAddress[hsvPixel + 2]/100;
             
-            UIColor *color = [UIColor colorWithHue:h saturation:s brightness:v alpha:a];
+            color = [UIColor colorWithHue:h saturation:s brightness:v alpha:a];
             [color getRed:&r green:&g blue:&b alpha:&a];
-            
-//            S = (float)s/100;
-//            V = (float)v/100;
-//            
-//            
-//            C = S*V;
-//            X = C*(1-ABS(fmodf((float)h/60, 2) - 1));//
-//            m = V - C;
-//            
-//            if (h >= 0 && h < 60) {
-//                r = C + m;
-//                g = X + m;
-//                b = m;
-//            } else if(h >= 60 && h < 120) {
-//                r = X + m;
-//                g = C + m;
-//                b = m;
-//            } else if(h >= 120 && h < 180) {
-//                r = m;
-//                g = C + m;
-//                b = X + m;
-//            } else if(h >= 180 && h < 240) {
-//                r = m;
-//                g = X + m;
-//                b = C + m;
-//            } else if(h >= 240 && h < 300) {
-//                r = X + m;
-//                g = m;
-//                b = C + m;
-//            } else if(h >= 300 && h < 360) {
-//                r = C + m;
-//                g = m;
-//                b = X + m;
-//            }
     
             // Set values
             dstAddress[rgbaPixel] = (int)255*r;
