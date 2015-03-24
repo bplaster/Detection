@@ -7,6 +7,7 @@
 //
 
 #import "BufferProcessor.h"
+#import <UIKit/UIKit.h>
 
 @implementation BufferProcessor
 
@@ -16,14 +17,9 @@
 + (int) detectCircles: (vImage_Buffer *)source withRadius:(int)radius useGradient:(BOOL) useGradient outputHough:(vImage_Buffer *)hough{
     
     // TODO: What is the number of points based on?
-    int votingThreshold = 50; //MAX(30, radius);
-    unsigned char * srcAddress = source->data;
-    
-    // Hough space is image size + extended by radius in every direction
-//    size_t tmpRowBytes = 2*radius+source->rowBytes;
-//    size_t tmpHeight = 2*radius+source->height;
+    int votingThreshold = MAX(30, radius);
+    unsigned char *srcAddress = source->data;    
     unsigned char *houghAddress = hough->data;
-//    vImage_Buffer tmp = {tmpAddress, tmpHeight, 2*radius + source->width, tmpRowBytes};
     
     // Iterate over image space
     unsigned long pixel = 0;
@@ -52,6 +48,10 @@
                     [self voteCircleAtX:x0 Y:y0 Radius:radius buffer:source votes:255];
                     count++;
                 }
+            }
+            // Make hough image visible
+            if (houghAddress[pixel] > 0) {
+                houghAddress[pixel] += 30;
             }
         }
     }
@@ -209,5 +209,296 @@
     free(dirAddress);
     
 }
+
++ (void)colorQuantization: (vImage_Buffer *)src toDestination: (vImage_Buffer*)dst withMeans:(int)k andMethod: (ImageType) type {
+    switch (type) {
+        case RGB:{
+            [self kMeans:k forRGBImage:src toDestination:dst];
+            break;
+        }
+        case HSV:{
+            size_t height = src->height;
+            size_t width = src->width;
+            size_t bytesPerRow = 3*width;
+            unsigned char* hsvAddress = malloc(height*bytesPerRow);
+            vImage_Buffer hsv = { hsvAddress, height, width, bytesPerRow };
+            
+            [self convertRGBImage:src toHSVDestination:&hsv];
+//            [self kMeans:k forHSVImage:&hsv toDestination:&hsv];
+            [self convertHSVImage:&hsv toRGBDestination:dst];
+            free(hsvAddress);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
++ (void)kMeans: (int)k forRGBImage: (vImage_Buffer *)src toDestination: (vImage_Buffer *)dst{
+    int kMeans[k][3], kPoints[k], steps = 5, step = 0, meanIndex = 0, r, g, b;
+    float minDistance = 1000, distance;
+    unsigned char* srcAddress = src->data;
+    unsigned char* dstAddress = dst->data;
+
+    unsigned long kSums[k][3], pixel;
+    
+    // Initial random values
+    for (int i = 0; i < k; i++) {
+        
+        kMeans[i][0] = arc4random()%256;
+        kMeans[i][1] = arc4random()%256;
+        kMeans[i][2] = arc4random()%256;
+        kSums[i][0] = 0;
+        kSums[i][1] = 0;
+        kSums[i][2] = 0;
+        kPoints[i] = 0;
+        NSLog(@"Kmean: %i, %i, %i", kMeans[i][0], kMeans[i][1],kMeans[i][2]);
+    }
+    
+    while (step < steps) {
+        // Iterate through points
+        for (int row = 0; row < src->height; row++) {
+            for (int column = 0; column < src->width; column++) {
+                pixel = row*src->rowBytes + 4*column;
+                r = srcAddress[pixel];
+                g = srcAddress[pixel + 1];
+                b = srcAddress[pixel + 2];
+                
+                // Determine closest cluster
+                minDistance = 1000;
+                for (int i = 0; i < k; i++) {
+                    distance = sqrt(pow(kMeans[i][0] - r, 2) + pow(kMeans[i][1] - g, 2) + pow(kMeans[i][2] - b, 2));
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        meanIndex = i;
+                    }
+                }
+                kSums[meanIndex][0] += r;
+                kSums[meanIndex][1] += g;
+                kSums[meanIndex][2] += b;
+                kPoints[meanIndex]++;
+            }
+        }
+        
+        // Calculate new k-means
+        for (int i = 0; i < k; i++) {
+            kMeans[i][0] = (int)kSums[i][0]/kPoints[i];
+            kMeans[i][1] = (int)kSums[i][1]/kPoints[i];
+            kMeans[i][2] = (int)kSums[i][2]/kPoints[i];
+            kSums[i][0] = 0;
+            kSums[i][1] = 0;
+            kSums[i][2] = 0;
+            kPoints[i] = 0;
+            NSLog(@"Kmean Iteration [%i]: %i, %i, %i", step, kMeans[i][0], kMeans[i][1],kMeans[i][2]);
+        }
+        step++;
+    }
+    
+    // Replace with new means
+    for (int row = 0; row < src->height; row++) {
+        for (int column = 0; column < src->width; column++) {
+            pixel = row*src->rowBytes + 4*column;
+            r = srcAddress[pixel];
+            g = srcAddress[pixel + 1];
+            b = srcAddress[pixel + 2];
+            
+            // Determine closest cluster
+            minDistance = 1000;
+            for (int i = 0; i < k; i++) {
+                distance = sqrt(pow(kMeans[i][0] - r, 2) + pow(kMeans[i][1] - g, 2) + pow(kMeans[i][2] - b, 2));
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    meanIndex = i;
+                }
+            }
+            dstAddress[pixel] = kMeans[meanIndex][0];
+            dstAddress[pixel + 1] = kMeans[meanIndex][1];
+            dstAddress[pixel + 2] = kMeans[meanIndex][2];
+        }
+    }
+}
+
++ (void)kMeans: (int)k forHSVImage: (vImage_Buffer *)src toDestination: (vImage_Buffer *)dst{
+    int kMeans[k], kPoints[k], steps = 5, step = 0, meanIndex = 0, h;
+    float minDistance = 1000, distance;
+    unsigned char* srcAddress = src->data;
+    unsigned char* dstAddress = dst->data;
+    
+    unsigned long kSums[k], pixel;
+    
+    // Initial random values
+    for (int i = 0; i < k; i++) {
+        
+        kMeans[i] = arc4random()%360;
+        kSums[i] = 0;
+        kPoints[i] = 0;
+        NSLog(@"Kmean: %i", kMeans[i]);
+    }
+    
+    while (step < steps) {
+        // Iterate through points
+        for (int row = 0; row < src->height; row++) {
+            for (int column = 0; column < src->width; column++) {
+                pixel = row*src->rowBytes + 3*column;
+                h = srcAddress[pixel];
+                
+                // Determine closest cluster
+                minDistance = 1000;
+                for (int i = 0; i < k; i++) {
+                    distance = ABS(kMeans[i] - h);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        meanIndex = i;
+                    }
+                }
+                kSums[meanIndex] += h;
+                kPoints[meanIndex]++;
+            }
+        }
+        
+        // Calculate new k-means
+        for (int i = 0; i < k; i++) {
+            kMeans[i] = (int)kSums[i]/kPoints[i];
+            kSums[i] = 0;
+            kPoints[i] = 0;
+            NSLog(@"Kmean Iteration [%i]: %i", step, kMeans[i]);
+        }
+        step++;
+    }
+    
+    // Replace with new means
+    for (int row = 0; row < src->height; row++) {
+        for (int column = 0; column < src->width; column++) {
+            pixel = row*src->rowBytes + 3*column;
+            h = srcAddress[pixel];
+            
+            // Determine closest cluster
+            minDistance = 1000;
+            for (int i = 0; i < k; i++) {
+                distance = ABS(kMeans[i] - h);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    meanIndex = i;
+                }
+            }
+            dstAddress[pixel] = kMeans[meanIndex];
+            dstAddress[pixel + 1] = srcAddress[pixel + 1];
+            dstAddress[pixel + 2] = srcAddress[pixel + 2];
+        }
+    }
+}
+
+
++ (void)convertRGBImage: (vImage_Buffer *)src toHSVDestination: (vImage_Buffer *)dst {
+    unsigned char * srcAddress = src->data;
+    unsigned char * dstAddress = dst->data;
+    CGFloat h = 0, s, v, r, g, b, a, cMin, cMax, delta;
+    unsigned long rgbaPixel, hsvPixel;
+    for (int row = 0; row < src->height; row++) {
+        for (int column = 0; column < src->width; column++) {
+            rgbaPixel = row*src->rowBytes + 4*column;
+            hsvPixel = row*dst->rowBytes + 3*column;
+
+            r = (CGFloat)srcAddress[rgbaPixel]/255.;
+            g = (CGFloat)srcAddress[rgbaPixel + 1]/255.;
+            b = (CGFloat)srcAddress[rgbaPixel + 2]/255.;
+            
+            UIColor *color = [UIColor colorWithRed:r green:g blue:b alpha:1.0];
+            [color getHue:&h saturation:&s brightness:&v alpha:&a];
+            
+
+//            cMin = fminf(fminf(r, g),b);
+//            cMax = fmaxf(fmaxf(r, g),b);
+//            delta = cMax - cMin;
+//            
+//            // Hue calculation
+//            if (delta == 0) {
+//                h = 0;
+//            } else if (r == cMax) {
+//                h = fmodf((g-b)/delta, 6);
+//            } else if(g == cMax) {
+//                h = (b-r)/delta + 2;
+//            } else if (b == cMax){
+//                h = (r-g)/delta + 4;
+//            }
+//            h *= 60;
+//
+//            // Saturation calculation
+//            if (cMax == 0) {
+//                s = 0;
+//            } else {
+//                s = 100*delta/cMax;
+//            }
+//            
+//            // Value calcuation
+//            v = 100*cMax;
+            
+            // Set values
+            dstAddress[hsvPixel] = (int)360*h;
+            dstAddress[hsvPixel + 1] = (int)100*s;
+            dstAddress[hsvPixel + 2] = (int)100*v;
+        }
+    }
+}
+
++ (void)convertHSVImage: (vImage_Buffer *)src toRGBDestination: (vImage_Buffer *)dst {
+    unsigned char * srcAddress = src->data;
+    unsigned char * dstAddress = dst->data;
+    CGFloat h, s, v, S, V, C, X, m, r = 0, g = 0, b = 0, a = 1;
+    unsigned long rgbaPixel, hsvPixel;
+    for (int row = 0; row < src->height; row++) {
+        for (int column = 0; column < src->width; column++) {
+            hsvPixel = row*src->rowBytes + 3*column;
+            rgbaPixel = row*dst->rowBytes + 4*column;
+
+            h = (CGFloat)srcAddress[hsvPixel]/360;
+            s = (CGFloat)srcAddress[hsvPixel + 1]/100;
+            v = (CGFloat)srcAddress[hsvPixel + 2]/100;
+            
+            UIColor *color = [UIColor colorWithHue:h saturation:s brightness:v alpha:a];
+            [color getRed:&r green:&g blue:&b alpha:&a];
+            
+//            S = (float)s/100;
+//            V = (float)v/100;
+//            
+//            
+//            C = S*V;
+//            X = C*(1-ABS(fmodf((float)h/60, 2) - 1));//
+//            m = V - C;
+//            
+//            if (h >= 0 && h < 60) {
+//                r = C + m;
+//                g = X + m;
+//                b = m;
+//            } else if(h >= 60 && h < 120) {
+//                r = X + m;
+//                g = C + m;
+//                b = m;
+//            } else if(h >= 120 && h < 180) {
+//                r = m;
+//                g = C + m;
+//                b = X + m;
+//            } else if(h >= 180 && h < 240) {
+//                r = m;
+//                g = X + m;
+//                b = C + m;
+//            } else if(h >= 240 && h < 300) {
+//                r = X + m;
+//                g = m;
+//                b = C + m;
+//            } else if(h >= 300 && h < 360) {
+//                r = C + m;
+//                g = m;
+//                b = X + m;
+//            }
+    
+            // Set values
+            dstAddress[rgbaPixel] = (int)255*r;
+            dstAddress[rgbaPixel + 1] = (int)255*g;
+            dstAddress[rgbaPixel + 2] = (int)255*b;
+        }
+    }
+}
+
 
 @end

@@ -6,6 +6,9 @@
     <objects>
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="ImageViewController">
             <connections>
+                <outlet property="colorSegmentController" destination="Tpg-XW-VDo" id="oC4-0D-Pbe"/>
+                <outlet property="modeSegmentController" destination="Ae1-qr-AMR" id="lUS-kj-QWd"/>
+                <outlet property="stepperController" destination="3eY-Hn-qST" id="8MK-0c-VSH"/>
                 <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
             </connections>
         </placeholder>
@@ -23,12 +26,45 @@
                         <action selector="changeImagePressed:" destination="-1" eventType="touchUpInside" id="hik-El-F49"/>
                     </connections>
                 </button>
+                <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="Ae1-qr-AMR">
+                    <rect key="frame" x="210" y="30" width="181" height="29"/>
+                    <segments>
+                        <segment title="Circles"/>
+                        <segment title="Quantization"/>
+                    </segments>
+                    <connections>
+                        <action selector="segmentChanged:" destination="-1" eventType="valueChanged" id="2DT-co-0fU"/>
+                    </connections>
+                </segmentedControl>
+                <segmentedControl opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="Tpg-XW-VDo">
+                    <rect key="frame" x="77" y="546" width="123" height="29"/>
+                    <segments>
+                        <segment title="RGB"/>
+                        <segment title="HSV"/>
+                    </segments>
+                    <connections>
+                        <action selector="segmentChanged:" destination="-1" eventType="valueChanged" id="MEr-Hs-1Ft"/>
+                    </connections>
+                </segmentedControl>
+                <stepper opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" value="2" minimumValue="2" maximumValue="100" translatesAutoresizingMaskIntoConstraints="NO" id="3eY-Hn-qST">
+                    <rect key="frame" x="400" y="546" width="94" height="29"/>
+                    <connections>
+                        <action selector="stepperChanged:" destination="-1" eventType="valueChanged" id="dpo-DH-jeS"/>
+                    </connections>
+                </stepper>
             </subviews>
             <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
             <constraints>
+                <constraint firstItem="3eY-Hn-qST" firstAttribute="leading" secondItem="btA-Pg-sbj" secondAttribute="trailing" constant="50" id="1B2-Z3-TRu"/>
+                <constraint firstItem="Ae1-qr-AMR" firstAttribute="top" secondItem="i5M-Pr-FkT" secondAttribute="top" constant="30" id="5Rt-eR-dYp"/>
+                <constraint firstAttribute="centerX" secondItem="Ae1-qr-AMR" secondAttribute="centerX" constant="-0.5" id="WmX-zd-RwD"/>
                 <constraint firstAttribute="centerX" secondItem="btA-Pg-sbj" secondAttribute="centerX" id="keh-UJ-6tJ"/>
+                <constraint firstAttribute="bottom" secondItem="3eY-Hn-qST" secondAttribute="bottom" constant="25" id="koT-SN-8R9"/>
                 <constraint firstAttribute="bottom" secondItem="btA-Pg-sbj" secondAttribute="bottom" constant="25" id="myK-Ap-Xfq"/>
+                <constraint firstAttribute="bottom" secondItem="Tpg-XW-VDo" secondAttribute="bottom" constant="26" id="qHk-9y-zVZ"/>
+                <constraint firstItem="btA-Pg-sbj" firstAttribute="leading" secondItem="Tpg-XW-VDo" secondAttribute="trailing" constant="50" id="sHd-12-LOd"/>
             </constraints>
+            <point key="canvasLocation" x="387" y="210"/>
         </view>
     </objects>
 </document>
