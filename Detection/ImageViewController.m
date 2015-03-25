@@ -7,6 +7,7 @@
 //
 
 #import "ImageViewController.h"
+#import "HistViewController.h"
 #import "BufferProcessor.h"
 
 @interface ImageViewController () <UINavigationControllerDelegate, UIImagePickerControllerDelegate>
@@ -19,6 +20,9 @@
 @property (strong, nonatomic) IBOutlet UISegmentedControl *colorSegmentController;
 @property (nonatomic, assign) ImageType currentImageMode;
 @property (strong, nonatomic) IBOutlet UIStepper *stepperController;
+@property (strong, nonatomic) IBOutlet UISwitch *gradientSwitch;
+@property (strong, nonatomic) HistViewController *histView;
+@property (strong, nonatomic) IBOutlet UIButton *histogramButton;
 
 @property (nonatomic, assign) CGSize screenSize;
 
@@ -33,11 +37,19 @@
     return self;
 }
 
+-(BOOL)shouldAutorotate {
+    return NO;
+}
+
+-(NSUInteger)supportedInterfaceOrientations{
+    return UIInterfaceOrientationPortrait;
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
     
-    self.currentImageMode = RGB;
+    self.currentImageMode = HSV;
     self.screenSize = ([UIScreen mainScreen]).bounds.size;
     self.topImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, self.screenSize.width, self.screenSize.height/2)];
     self.bottomImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, self.screenSize.height/2, self.screenSize.width, self.screenSize.height/2)];
@@ -61,19 +73,35 @@
     [self.radiusSlider addTarget:self action:@selector(sliderValueChanged:) forControlEvents:UIControlEventValueChanged];
     [self.view addSubview:self.radiusSlider];
     
+    // Create histogram view
+    self.histView = [[HistViewController alloc] init];
+    
+    // Add gesture
+    UITapGestureRecognizer *gesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(toggleNavBar:)];
+    [self.view addGestureRecognizer:gesture];
+    [self.navigationController setNavigationBarHidden:YES animated:YES];
+    
     // Update Views
     [self.maxThresholdSlider setHidden:NO];
     [self.radiusSlider setHidden:NO];
     [self.stepperController setHidden:YES];
     [self.colorSegmentController setHidden:YES];
+    [self.maxThresholdSlider setHidden:!self.gradientSwitch.isOn];
+    [self.histogramButton setHidden:YES];
     [self updateViewPositions];
     [self refreshImageView];
 }
 
+- (void)toggleNavBar:(UITapGestureRecognizer *)gesture {
+    BOOL barsHidden = self.navigationController.navigationBar.hidden;
+    [self.navigationController setNavigationBarHidden:!barsHidden animated:YES];
+}
+
 - (void) updateViewPositions {
     int padding = 10;
-    self.maxThresholdSlider.center = CGPointMake(self.screenSize.width - self.maxThresholdSlider.bounds.size.height/2 - padding, self.screenSize.height/2 - self.maxThresholdSlider.bounds.size.width/2 - padding);
-    self.radiusSlider.center = CGPointMake(self.screenSize.width - self.maxThresholdSlider.bounds.size.height/2 - padding, self.screenSize.height/2 + self.maxThresholdSlider.bounds.size.width/2 - padding);
+
+    self.maxThresholdSlider.center = CGPointMake(self.bottomImageView.center.x + self.bottomImageView.bounds.size.width/2 - self.maxThresholdSlider.bounds.size.height/2 - padding, self.bottomImageView.center.y);
+    self.radiusSlider.center = CGPointMake(self.topImageView.center.x + self.topImageView.bounds.size.width/2 - self.radiusSlider.bounds.size.height/2 - padding, self.topImageView.center.y);
 }
 
 - (void) sliderValueChanged:(id)sender {
@@ -81,11 +109,6 @@
 }
 
 - (void)refreshImageView {
-    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc]initWithFrame:CGRectMake(0,0,50,50)];
-    spinner.center = self.bottomImageView.center;
-    spinner.color = [UIColor blueColor];
-    [spinner startAnimating];
-    [self.bottomImageView addSubview:spinner];
     
     switch (self.modeSegmentController.selectedSegmentIndex) {
         
@@ -120,9 +143,14 @@
             vImage_Buffer hough = {houghAddress, houghHeight, houghWidth, houghRowBytes};
             
             // Do processing on buffer
-            [BufferProcessor cannyDetector:&src toDestination:&dst withMinVal:self.maxThresholdSlider.value*(2./3.) andMaxVal:self.maxThresholdSlider.value];
-            int total = [BufferProcessor detectCircles:&dst withRadius:radius useGradient:NO outputHough:&hough];
-            NSLog(@"Found %i circles",total);
+            if (self.gradientSwitch.isOn) {
+                [BufferProcessor cannyDetector:&src toDestination:&dst withMinVal:self.maxThresholdSlider.value*(3./4.) andMaxVal:self.maxThresholdSlider.value];
+            } else {
+                [BufferProcessor cannyDetector:&src toDestination:&dst withMinVal:0 andMaxVal:0];
+            }
+            
+            int total = [BufferProcessor detectCircles:&dst withRadius:radius outputHough:&hough];
+            NSLog(@"Found %i circles of radius %i",total, radius);
             free(srcAddress);
             
             // Create new image
@@ -198,8 +226,15 @@
                                                             colorSpace, kCGImageAlphaNoneSkipLast | kCGBitmapByteOrder32Big);
             CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
             CGContextRelease(context);
-
+            
+            // Do quantization
+            NSLog(@"k-means: %i", (int)self.stepperController.value);
             [BufferProcessor colorQuantization:&src toDestination:&dst withMeans:(int)self.stepperController.value andMethod: self.currentImageMode];
+            long long diff = [BufferProcessor ssdOfImage:&src andImage:&dst];
+            NSLog(@"SSD: %lli", diff);
+            
+            // Set up histograms
+            [self.histView setImageHistogramOriginal:&src andQuantized:&dst];
             
             //Create new image
             CGContextRef newContext = CGBitmapContextCreate(dstAddress, width, height,
@@ -220,9 +255,7 @@
         default:
             break;
     }
-    
-    [spinner stopAnimating];
-    [spinner removeFromSuperview];
+
 }
 
 - (IBAction)changeImagePressed:(id)sender {
@@ -236,17 +269,21 @@
     if (control == self.modeSegmentController) {
         switch (control.selectedSegmentIndex) {
             case 0:{
-                [self.maxThresholdSlider setHidden:NO];
                 [self.radiusSlider setHidden:NO];
                 [self.stepperController setHidden:YES];
                 [self.colorSegmentController setHidden:YES];
+                [self.gradientSwitch setHidden:NO];
+                [self.maxThresholdSlider setHidden:!self.gradientSwitch.isOn];
+                [self.histogramButton setHidden:YES];
                 break;
             }
             case 1:{
-                [self.maxThresholdSlider setHidden:YES];
                 [self.radiusSlider setHidden:YES];
                 [self.stepperController setHidden:NO];
                 [self.colorSegmentController setHidden:NO];
+                [self.gradientSwitch setHidden:YES];
+                [self.maxThresholdSlider setHidden:YES];
+                [self.histogramButton setHidden:NO];
                 break;
             }
                 
@@ -276,6 +313,15 @@
 
 - (IBAction)stepperChanged:(id)sender {
     [self refreshImageView];
+}
+
+- (IBAction)gradientSwitchChanged:(id)sender {
+    [self.maxThresholdSlider setHidden:!self.gradientSwitch.isOn];
+    [self refreshImageView];
+}
+
+- (IBAction)histogramButtonPressed:(id)sender {
+    [self.navigationController pushViewController:self.histView animated:YES];
 }
 
 #pragma mark - UIImagePickerControllerDelegate

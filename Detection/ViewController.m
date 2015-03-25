@@ -18,8 +18,18 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+
     // Do any additional setup after loading the view, typically from a nib.
     
+}
+
+
+-(BOOL)shouldAutorotate {
+    return NO;
+}
+
+-(NSUInteger)supportedInterfaceOrientations{
+    return UIInterfaceOrientationPortrait;
 }
 
 - (IBAction)galleryButtonPressed:(id)sender {
@@ -36,9 +46,9 @@
                    editingInfo:(NSDictionary *)editingInfo
 {
     [self dismissModalViewControllerAnimated:YES];
-    ImageViewController *imageViewController = [[ImageViewController alloc] initWithImage:image];
     
-    [self presentViewController:imageViewController animated:YES completion:nil];
+    ImageViewController *imageViewController = [[ImageViewController alloc] initWithImage:image];    
+    [self.navigationController pushViewController:imageViewController animated:YES];
     
 }
 

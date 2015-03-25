@@ -14,7 +14,7 @@
 // Hough Circle Detector
 // Notes:   Assumes you've already allocated memory for destination
 //          Assumes the source is edges
-+ (int) detectCircles: (vImage_Buffer *)source withRadius:(int)radius useGradient:(BOOL) useGradient outputHough:(vImage_Buffer *)hough{
++ (int) detectCircles: (vImage_Buffer *)source withRadius:(int)radius outputHough:(vImage_Buffer *)hough{
     
     // TODO: What is the number of points based on?
     int votingThreshold = MAX(30, radius);
@@ -234,6 +234,26 @@
     }
 }
 
++ (int*) hueHistogramFor: (vImage_Buffer *)src toDest:(int*)histogram {
+    unsigned char *srcAddress = src->data;
+    unsigned long pixel = 0;
+    int total = 0;
+    
+    for (int row = 0; row < src->height; row++) {
+        for (int column = 0; column < src->width; column++) {
+            pixel = row*src->rowBytes + 3*column;
+            histogram[(int)srcAddress[pixel]]++;
+            total++;
+        }
+    }
+    
+    for (int i = 0; i < 100; i++) {
+        histogram[i] = (int)((float)histogram[i]/(total/100.0));
+    }
+    
+    return histogram;
+}
+
 + (void)kMeans: (int)k forRGBImage: (vImage_Buffer *)src toDestination: (vImage_Buffer *)dst{
     int kMeans[k][3], kPoints[k], steps = 5, step = 0, meanIndex = 0, r, g, b;
     float minDistance = 1000, distance;
@@ -252,7 +272,7 @@
         kSums[i][1] = 0;
         kSums[i][2] = 0;
         kPoints[i] = 0;
-        NSLog(@"Kmean: %i, %i, %i", kMeans[i][0], kMeans[i][1],kMeans[i][2]);
+//        NSLog(@"Kmean Initial: %i, %i, %i", kMeans[i][0], kMeans[i][1],kMeans[i][2]);
     }
     
     while (step < steps) {
@@ -289,7 +309,7 @@
             kSums[i][1] = 0;
             kSums[i][2] = 0;
             kPoints[i] = 0;
-            NSLog(@"Kmean Iteration [%i]: %i, %i, %i", step, kMeans[i][0], kMeans[i][1],kMeans[i][2]);
+//            NSLog(@"Kmean Iteration [%i]: %i, %i, %i", step, kMeans[i][0], kMeans[i][1],kMeans[i][2]);
         }
         step++;
     }
@@ -332,7 +352,7 @@
         kMeans[i] = arc4random()%360;
         kSums[i] = 0;
         kPoints[i] = 0;
-        NSLog(@"Kmean: %i", kMeans[i]);
+//        NSLog(@"Kmean Initial: %i", kMeans[i]);
     }
     
     while (step < steps) {
@@ -361,7 +381,7 @@
             kMeans[i] = (int)kSums[i]/kPoints[i];
             kSums[i] = 0;
             kPoints[i] = 0;
-            NSLog(@"Kmean Iteration [%i]: %i", step, kMeans[i]);
+//            NSLog(@"Kmean Iteration [%i]: %i", step, kMeans[i]);
         }
         step++;
     }
@@ -440,6 +460,24 @@
             dstAddress[rgbaPixel + 2] = (int)255*b;
         }
     }
+}
+
++ (long long)ssdOfImage: (vImage_Buffer *)image1 andImage: (vImage_Buffer *)image2 {
+    long long sum = 0, distance = 0;
+    unsigned char * i1 = image1->data;
+    unsigned char * i2 = image2->data;
+    unsigned long pixel;
+    for (int row = 0; row < image1->height; row++) {
+        for (int column = 0; column < image1->width; column++) {
+            pixel = row*image1->rowBytes + 4*column;
+            distance =  pow(i1[pixel]   - i2[pixel], 2) +
+                        pow(i1[pixel+1] - i2[pixel+1], 2) +
+                        pow(i1[pixel+2] - i2[pixel+2], 2);
+            sum += distance;
+        }
+    }
+
+    return sum;
 }
 
 

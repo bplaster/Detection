@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6751" systemVersion="14C109" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="BYZ-38-t0r">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6751" systemVersion="14C109" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="4mN-ob-bNa">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="6736"/>
     </dependencies>
@@ -16,8 +16,8 @@
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="n5k-my-nQB">
-                                <rect key="frame" x="223" y="495" width="54" height="30"/>
+                            <button hidden="YES" opaque="NO" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="n5k-my-nQB">
+                                <rect key="frame" x="198" y="495" width="54" height="30"/>
                                 <state key="normal" title="Camera">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
@@ -26,7 +26,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="OgP-5H-mzm">
-                                <rect key="frame" x="326" y="495" width="48" height="30"/>
+                                <rect key="frame" x="276" y="495" width="48" height="30"/>
                                 <state key="normal" title="Gallery">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
@@ -34,18 +34,35 @@
                                     <action selector="galleryButtonPressed:" destination="BYZ-38-t0r" eventType="touchUpInside" id="ktd-vY-nxv"/>
                                 </connections>
                             </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" lineBreakMode="wordWrap" numberOfLines="11" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="MxT-tF-uxD">
+                                <rect key="frame" x="125" y="150" width="350" height="300"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="350" id="0Dh-HY-Uef"/>
+                                    <constraint firstAttribute="height" constant="300" id="7gA-HL-ko5"/>
+                                </constraints>
+                                <string key="text">Computer Vision Assignment 1 Brandon Plaster  Instructions:  Select "Gallery" to choose a starting image.   Once you select an image, you will be taken to a screen where you can choose between detecting circles or quantizing color.        
+ 
+</string>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstAttribute="centerX" secondItem="n5k-my-nQB" secondAttribute="centerX" constant="50" id="278-CJ-EFS"/>
+                            <constraint firstAttribute="centerX" secondItem="n5k-my-nQB" secondAttribute="centerX" constant="75" id="278-CJ-EFS"/>
                             <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="OgP-5H-mzm" secondAttribute="bottom" constant="75" id="5fR-c4-WJi"/>
-                            <constraint firstAttribute="centerX" secondItem="OgP-5H-mzm" secondAttribute="centerX" constant="-50" id="e38-Tl-K8Q"/>
+                            <constraint firstAttribute="centerX" secondItem="MxT-tF-uxD" secondAttribute="centerX" id="Nx9-nd-4q1"/>
+                            <constraint firstAttribute="centerY" secondItem="MxT-tF-uxD" secondAttribute="centerY" id="ZwL-zB-yMt"/>
+                            <constraint firstAttribute="centerX" secondItem="OgP-5H-mzm" secondAttribute="centerX" id="e38-Tl-K8Q"/>
                             <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="n5k-my-nQB" secondAttribute="bottom" constant="75" id="y9w-mb-uK1"/>
                         </constraints>
                     </view>
+                    <navigationItem key="navigationItem" id="a7h-km-uKF"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
+            <point key="canvasLocation" x="1213" y="223"/>
         </scene>
         <!--Live View Controller-->
         <scene sceneID="cD9-p3-i5x">
@@ -53,7 +70,25 @@
                 <viewController id="Dzb-Rc-fEg" customClass="LiveViewController" sceneMemberID="viewController"/>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="KyJ-dR-s3z" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1068" y="339"/>
+            <point key="canvasLocation" x="1880" y="339"/>
+        </scene>
+        <!--Navigation Controller-->
+        <scene sceneID="SHp-cJ-kwQ">
+            <objects>
+                <navigationController automaticallyAdjustsScrollViewInsets="NO" id="4mN-ob-bNa" sceneMemberID="viewController">
+                    <toolbarItems/>
+                    <navigationBar key="navigationBar" contentMode="scaleToFill" id="OGm-EI-xPn">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </navigationBar>
+                    <nil name="viewControllers"/>
+                    <connections>
+                        <segue destination="BYZ-38-t0r" kind="relationship" relationship="rootViewController" id="Tcz-2t-EU6"/>
+                    </connections>
+                </navigationController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="sks-LI-PRW" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="465" y="-470"/>
         </scene>
     </scenes>
 </document>
